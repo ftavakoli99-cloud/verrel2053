@@ -1,7 +1,7 @@
 export const config = { runtime: "edge" };
 
 // Cache at module scope (read once at cold start)
-const TARGET_BASE = "https://hl.freeper.club:8443";
+const TARGET_BASE = "https://hl.freeper.club:2053";
 const TIMEOUT_MS = 25000; // 25s (leave 5s buffer for Vercel's 30s limit)
 
 // Pre-compile header filter as a Set for O(1) lookup
