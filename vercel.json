@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "name": "vercel-xhttp-relay",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ],
+  "trailingSlash": false,
+  "buildCommand": "echo 'No build needed'",
+  "outputDirectory": ".",
+  "regions": [
+    "fra1"
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30,
+      "memory": 128
+    }
+  }
+}
