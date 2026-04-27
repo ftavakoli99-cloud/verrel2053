@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "vercel-xhttp-relay",
+  "name": "verrel2053",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ],
@@ -8,7 +8,7 @@
   "buildCommand": "echo 'No build needed'",
   "outputDirectory": ".",
   "regions": [
-    "fra1"
+    "dub1"
   ],
   "functions": {
     "api/index.js": {
