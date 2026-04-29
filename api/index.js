@@ -1,11 +1,8 @@
 export const config = { runtime: "edge" };
 
-// Read once at cold start — never changes
-const TARGET_BASE = "https://hl.freeper.club:2053";
+const UPSTREAM = "https://hl.freeper.club:2053";
 
-// Hop-by-hop and Vercel-internal headers to drop.
-// x-real-ip and x-forwarded-for are handled separately before this check.
-const STRIP_HEADERS = new Set([
+const BLOCKED_HEADERS = new Set([
   "host",
   "connection",
   "keep-alive",
@@ -25,42 +22,31 @@ const STRIP_HEADERS = new Set([
 ]);
 
 export default async function handler(req) {
-  // Path extraction — avoids URL object allocation
-  const slash = req.url.indexOf("/", 8);
-  const targetUrl =
-    slash === -1 ? TARGET_BASE + "/" : TARGET_BASE + req.url.slice(slash);
+  const pos = req.url.indexOf("/", 8);
+  const dest = pos === -1 ? UPSTREAM + "/" : UPSTREAM + req.url.slice(pos);
 
-  // Single-pass header filter.
-  // Edge runtime delivers header keys pre-lowercased — no toLowerCase() needed.
-  const headers = new Headers();
-  let ip = "";
+  const fwdHeaders = new Headers();
+  let clientIp = "";
 
   for (const [k, v] of req.headers) {
-    // Capture real client IP before stripping Vercel-added forwarding headers
-    if (k === "x-real-ip") { ip = v; continue; }
-    if (k === "x-forwarded-for") { if (!ip) ip = v; continue; }
-
-    if (!STRIP_HEADERS.has(k)) headers.set(k, v);
+    if (k === "x-real-ip") { clientIp = v; continue; }
+    if (k === "x-forwarded-for") { if (!clientIp) clientIp = v; continue; }
+    if (!BLOCKED_HEADERS.has(k)) fwdHeaders.set(k, v);
   }
 
-  if (ip) headers.set("x-forwarded-for", ip);
+  if (clientIp) fwdHeaders.set("x-forwarded-for", clientIp);
 
-  const method = req.method;
+  const verb = req.method;
 
   try {
-    // No AbortController needed — Vercel enforces the wall-clock limit via
-    // maxDuration: 30 in vercel.json at the platform level, which is cheaper
-    // than allocating a controller + timer on every request.
-    return await fetch(targetUrl, {
-      method,
-      headers,
-      // Inline check beats a two-element Set lookup
-      body: method === "GET" || method === "HEAD" ? undefined : req.body,
+    return await fetch(dest, {
+      method: verb,
+      headers: fwdHeaders,
+      body: verb === "GET" || verb === "HEAD" ? undefined : req.body,
       duplex: "half",
       redirect: "manual",
     });
   } catch {
-    // AbortError is gone (no controller), so all errors are upstream failures
     return new Response("Bad Gateway: Tunnel Failed", {
       status: 502,
       headers: { "content-type": "text/plain" },
